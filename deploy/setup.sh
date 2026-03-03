@@ -9,28 +9,10 @@ DATA_DIR="${DATA_DIR:-/opt/aep/data}"
 
 echo "===> Installing Docker"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl gnupg
-
-install -m 0755 -d /etc/apt/keyrings
-
-# Detect distro (Ubuntu vs Debian)
-. /etc/os-release
-DISTRO_ID="${ID}"  # ubuntu or debian
-
-curl -fsSL "https://download.docker.com/linux/${DISTRO_ID}/gpg" \
-  | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-chmod a+r /etc/apt/keyrings/docker.gpg
-
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-  https://download.docker.com/linux/${DISTRO_ID} \
-  ${VERSION_CODENAME} stable" \
-  > /etc/apt/sources.list.d/docker.list
-
-apt-get update -qq
-apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin git
-
+apt-get install -y -qq curl git
+curl -fsSL https://get.docker.com | sh
 systemctl enable --now docker
+
 echo "Docker installed: $(docker --version)"
 
 echo "===> Cloning repo"
