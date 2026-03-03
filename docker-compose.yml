@@ -1,0 +1,62 @@
+version: "3.9"
+
+networks:
+  aep-network:
+    name: aep-network
+    driver: bridge
+
+volumes:
+  postgres-data:
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aep}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-aep}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - aep-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aep}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://aep:changeme@db:5432/aep}
+      MASTER_KEY: ${MASTER_KEY}
+      PORT: 3001
+      DATA_HOST_PATH: ${DATA_HOST_PATH:-/opt/aep/data}
+      AEP_NETWORK: aep-network
+      AGENT_IMAGE: ${AGENT_IMAGE:-aep-agent-runtime:latest}
+    ports:
+      - "3001:3001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DATA_HOST_PATH:-/opt/aep/data}:${DATA_HOST_PATH:-/opt/aep/data}
+    networks:
+      - aep-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    networks:
+      - aep-network
